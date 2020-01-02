@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ /*
+  ~  * Copyright (c) 2014- MHISoft LLC and/or its affiliates. All rights reserved.
+  ~  * Licensed to MHISoft LLC under one or more contributor
+  ~  * license agreements. See the NOTICE file distributed with
+  ~  * this work for additional information regarding copyright
+  ~  * ownership. MHISoft LLC licenses this file to you under
+  ~  * the Apache License, Version 2.0 (the "License"); you may
+  ~  * not use this file except in compliance with the License.
+  ~  * You may obtain a copy of the License at
+  ~  *
+  ~  *    http://www.apache.org/licenses/LICENSE-2.0
+  ~  *
+  ~  * Unless required by applicable law or agreed to in writing,
+  ~  * software distributed under the License is distributed on an
+  ~  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~  * KIND, either express or implied.  See the License for the
+  ~  * specific language governing permissions and limitations
+  ~  * under the License.
+  ~  */
+  ~
+  -->
+
+
+<!--adding a new jar to dist/lib
+also add the entry to the MANIFEST.MF
+        Class-Path:
+        lib/forms_rt.jar
+        lib/images.jar lib/common-utils-1.0.jar
+        lib/jasypt-1.9.2.jar
+        lib/rsyntaxtextarea-2.5.8.jar
+        lib/vfsjfilechooser2-0.2.7.jar
+        lib/image-viewer-1.2.4.jar
+        lib/commons-vfs2-2.0.jar
+        lib/commons-io-2.1.jar
+        lib/commons-logging-api-1.1.jar
+
+        -->
+
+
+
+<project name="eWallet build" default="dist" >
+
+    <property environment="env"/>
+
+    <!--
+         PROPERTY FILE HIERARCHY:
+            first declared properties wins!
+     -->
+    <property file="local.properties"/>
+
+    <property name="version" value="1.3.6"/>
+    <property name="commonutil.version" value="1.0"/>
+    <property name="AppNameWithVersion" value="MHISoft eVault ${version}"/>
+    <property name="ARTIFACT_NAME" value="evault-${version}"/>
+    <property name="src.dir" value="src"/>
+
+    <property name="application.title" value="MHISoft eVault"/>
+    <property name="launch4j.tmp.make.dir" value="dist/tmp_make_exe"/>
+    <!--<property name="launch4j.home.dir" location="/Users/i831964/bin/launch4j" />-->
+
+    <property name="MAC_JRE_BUNDLE_DIR" value="dist/MAC/jdk1.8.0_51.jdk/Contents/Home"/>
+
+
+    <!--<taskdef resource="net/sf/antcontrib/antcontrib.properties"/>-->
+
+    <taskdef resource="net/sf/antcontrib/antlib.xml">
+        <classpath>
+            <pathelement path="../dist/lib/ant-contrib-1.0b3.jar" />
+        </classpath>
+    </taskdef>
+
+    <taskdef name="launch4j"
+             classname="net.sf.launch4j.ant.Launch4jTask"
+             classpath="${launch4j.home.dir}/launch4j.jar:${launch4j.home.dir}/lib/xstream.jar" />
+
+
+    <!-- set the operating system test properties -->
+    <condition property="isMac">
+        <os family="mac" />
+    </condition>
+
+    <condition property="isWindows">
+        <os family="windows" />
+    </condition>
+
+    <condition property="isUnix">
+        <os family="unix" />
+    </condition>
+
+
+    <macrodef name="maven">
+        <attribute name="argline"/>
+        <attribute name="dir"/>
+        <sequential>
+            <echo message="******************************************************************************************  @{dir} @{argline}"/>
+            <echo message="MAVEN_HOME=${env.MAVEN_HOME}"/>
+            <exec executable="${env.MAVEN_HOME}/bin/mvn.cmd" osfamily="windows" dir="@{dir}" failonerror="true">
+                <arg line="@{argline} -T 1C -P dev -Ddev=true -ff"/>
+            </exec>
+            <!--<exec executable="/Users/i831964/bin/maven/bin/mvn" dir="@{dir}" failonerror="true">-->
+            <exec executable="${env.MAVEN_HOME}/bin/mvn" osfamily="mac" dir="@{dir}" failonerror="true">
+                <arg line="@{argline} -T 1C -P dev -Ddev=true -ff"/>
+            </exec>
+        </sequential>
+    </macrodef>
+
+
+
+    <target name="dist" description="package and distribute">
+
+        <delete file="dist/${ARTIFACT_NAME}.exe"/>
+        <delete file="dist/${ARTIFACT_NAME}.jar"/>
+
+
+        <antcall target="update-version"></antcall>
+
+
+        <maven dir="../common-utils" argline="clean install -DskipTests=true"/>
+        <maven dir=".." argline="package -DskipTests=true"/>
+
+        <!--copy the jar to the dist folder -->
+        <copy file="target/${ARTIFACT_NAME}.jar" todir="dist" overwrite="true" failonerror="true"/>
+        <copy file="../common-utils/target/common-utils-${commonutil.version}.jar" todir="dist\lib" overwrite="true"/>
+
+        <!--<if>-->
+            <!--<equals arg1="${isWindows}" arg2="true"/>-->
+            <!--<then>-->
+                <!--<antcall target="package-app"/>-->
+            <!--</then>-->
+
+
+        <!--</if>-->
+
+        <antcall target="package-windows-exe-app"/>
+
+        <antcall target="bundle-mac-app"/>
+
+    </target>
+
+    <target name="release"  depends="dist">
+
+        <antcall target="update-version"/>
+
+
+         <!--for mac make a tar : MHISoft-eVault-1.1-bin-for-MacOS.tar"-->
+        <delete file="dist/release/${AppNameWithVersion}-bin-MacOS.tar"/>
+        <delete file="dist/release/${AppNameWithVersion}-bin-Windows.zip"/>
+
+
+        <!--mac, some how this does not work.
+        manual comrpess it for now. -->
+        <!--<zip  destfile="dist/release/${AppNameWithVersion}-bin-MacOS.zip">-->
+            <!--<zipfileset dir="dist/MHISoft eVault 1.1.app"  prefix="MHISoft eVault 1.1.app"/>-->
+        <!--</zip>-->
+
+        <zip  destfile="dist/release/${AppNameWithVersion}-bin-Windows.zip">
+            <zipfileset dir="dist" includes="${ARTIFACT_NAME}.exe" />
+            <zipfileset dir="dist" includes="wallet-2-128.ico" />
+            <zipfileset dir="dist/jre"  prefix="jre"/>
+        </zip>
+
+
+    </target>
+
+
+
+    <target name="update-version">
+        <echo message="Updating version to ${version}"/>
+
+        <property name="version.match" value="String\s*version\s*=\s*&quot;(.*)&quot;;" />
+        <property name="version.replace" value="String version = &quot;${version}&quot;;" />
+
+        <replaceregexp encoding="UTF-8" flags="g" match="${version.match}" replace="${version.replace}">
+            <fileset dir="${src.dir}/main/java/org/mhisoft/wallet">
+                <include name="WalletMain.java" />
+            </fileset>
+        </replaceregexp>
+
+
+
+        <property name="version.match2" value="&lt;version&gt;(.*)&lt;/version&gt;   &lt;!--app version--&gt;" />
+        <property name="version.replace2" value="&lt;version&gt;${version}&lt;/version&gt;   &lt;!--app version--&gt;" />
+        <replaceregexp encoding="UTF-8" flags="g" match="${version.match2}" replace="${version.replace2}">
+            <fileset dir="./">
+                <include name="pom.xml" />
+            </fileset>
+        </replaceregexp>
+
+        <!--up date the launch 4j file version as well
+           <outfile>S:\projects\mhisoft\apps\wallet\dist\evault-1.1.2.exe</outfile>
+
+         -->
+        <property name="version.match3" value="dist/evault-(.*)\.exe" />
+        <property name="version.replace3" value="dist/evault-${version}.exe" />
+        <replaceregexp encoding="UTF-8" flags="g" match="${version.match3}" replace="${version.replace3}">
+            <fileset dir="./dist">
+                <include name="evault-launch4j-config.xml" />
+                <include name="evault-launch4j-config-mac.xml" />
+            </fileset>
+        </replaceregexp>
+
+    </target>
+
+
+
+    <target name="bundle-mac-app"   if="${isMac}">
+
+        <delete file="dist/${AppNameWithVersion}.app"/>
+
+        <property name="sourceJar" value="${ARTIFACT_NAME}.jar"/>
+        <property name="launch4jFinalJar" value="evault-combined.jar"/>
+        <property name="AppMainClass" value="org.mhisoft.rdpro.ui.ReproMainForm"/>
+        <bundleapp outputdirectory="./dist"
+                   name="${AppNameWithVersion}"
+                   displayname="${AppNameWithVersion}"
+                   identifier="org.mhisoft.wallet.WalletMain"
+                   icon="dist/wallet-multi-size.icns"
+                   mainclassname="org.mhisoft.wallet.WalletMain">
+            <runtime dir="${MAC_JRE_BUNDLE_DIR}" />
+            <classpath dir="dist" includes="${ARTIFACT_NAME}.jar,lib/*.jar"/>
+        </bundleapp>
+    </target>
+
+
+    <!-- =======================================
+        launch 4j package the exe
+    ======================================= -->
+
+
+
+    <!--<if>-->
+        <!--<equals arg1="${isWindows}" arg2="true"/>-->
+        <!--<then>-->
+            <!--<taskdef name="launch4j"-->
+                     <!--classname="net.sf.launch4j.ant.Launch4jTask"-->
+                     <!--classpath="${launch4j.home.dir}/launch4j.jar:${launch4j.home.dir}/lib/xstream.jar" />-->
+
+        <!--</then>-->
+
+    <!--</if>-->
+
+
+    <!--https://java.net/downloads/appbundler/appbundler.html-->
+    <taskdef name="bundleapp"
+             classname="com.oracle.appbundler.AppBundlerTask"
+             classpath="../dist/lib/appbundler-1.0.jar" />
+
+
+
+    <target name="package-windows-exe-app">
+
+        <property name="sourceJar" value="${ARTIFACT_NAME}.jar"/>
+        <property name="launch4jFinalJar" value="evault-combined.jar"/>
+        <property name="AppMainClass" value="org.mhisoft.wallet.WalletMain"/>
+
+        <antcall target="_make-one-jar"/>
+
+        <if>
+            <equals arg1="${isWindows}" arg2="true"/>
+            <then>
+                <launch4j configFile="dist/evault-launch4j-config.xml"  />
+
+            </then>
+            <else>
+                <launch4j configFile="dist/evault-launch4j-config-mac.xml"  />
+            </else>
+
+        </if>
+
+
+        <!--clean up-->
+        <!--<delete dir="${launch4j.dir}" failonerror="false"/>-->
+
+        <!--make the Windows OS zip -->
+        <delete file="dist\MHISoft-eVault-${version}-bin-for-WindowsOS.zip"/>
+        <echo message="  --> package MHISoft-eVault-${version}-bin-for-WindowsOS.zip"/>
+        <zip destfile="dist\MHISoft-eVault-${version}-bin-for-WindowsOS.zip">
+            <zipfileset dir="dist/jre" prefix="jre"/>
+            <fileset dir="dist" includes="evault-${version}.exe" />
+            <fileset dir="dist" includes="wallet-2-128.ico"/>
+        </zip>
+
+
+
+    </target>
+
+
+    <target name="_make-one-jar" description="make the Win Exe Bundle" >
+        <property name="launch4j.jar" value="${launch4j.tmp.make.dir}/${launch4jFinalJar}"/>
+
+
+
+        <echo message="  --> Packaging ${application.title} into a single JAR at ${launch4j.jar}"/>
+        <delete dir="${launch4j.tmp.make.dir}" failonerror="false"/>
+        <mkdir dir="${launch4j.tmp.make.dir}"/>
+
+        <!--make the temp_final.jar-->
+
+        <if>
+            <equals arg1="${sourceJar}" arg2="${ARTIFACT_NAME}.jar"/>
+            <then>
+                <jar destfile="${launch4j.tmp.make.dir}/temp_final.jar" filesetmanifest="skip">
+                    <zipgroupfileset dir="dist" includes="${sourceJar}"/>
+                    <zipgroupfileset dir="dist/lib" includes="*.jar"/>
+                    <manifest>
+                        <attribute name="Main-Class" value="${AppMainClass}"/>
+                    </manifest>
+                </jar>
+            </then>
+            <else>
+                <echo message="  -->use source jar: ${sourceJar}"/>
+                <jar destfile="${launch4j.tmp.make.dir}/temp_final.jar" filesetmanifest="skip">
+                    <zipgroupfileset dir="dist" includes="${sourceJar}"/>
+                    <manifest>
+                        <attribute name="Main-Class" value="${AppMainClass}"/>
+                    </manifest>
+                </jar>
+            </else>
+        </if>
+
+
+        <!--make the combined jar-->
+        <echo message="  --> make the ${launch4j.jar}"/>
+        <zip destfile="${launch4j.jar}">
+            <zipfileset src="${launch4j.tmp.make.dir}/temp_final.jar"
+                        excludes="META-INF/*.SF, META-INF/*.DSA, META-INF/*.RSA, META-INF/maven/*, META-INF/jb/*"/>
+        </zip>
+
+    </target>
+
+    <target name="_test">
+        <copy file="target/${ARTIFACT_NAME}.jar" todir="dist" overwrite="true" failonerror="true"/>
+    </target>
+
+
+</project>

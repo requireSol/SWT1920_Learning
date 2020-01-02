@@ -1,0 +1,85 @@
+/*centralize the libraries*/
+ext.libraries = [ // Groovy map literal
+                  findbugs    : 'com.github.stephenc.findbugs:findbugs-annotations:1.3.9-1',
+                  findbugs_jsr: 'findbugs:jsr305:1.3.9-osgi',
+]
+
+
+/*define the properties*/
+ext {
+  SPRING_VERSION = '3.0.6.RELEASE'
+  PROJECT_VERSION = '1.0' /* (ver-var: version) */
+}
+
+
+/*
+provided plug in
+https://github.com/nebula-plugins/gradle-extra-configurations-plugin
+*/
+buildscript {
+  repositories {jcenter() }
+  dependencies {
+    classpath 'com.netflix.nebula:gradle-extra-configurations-plugin:3.0.3'
+  }
+}
+
+
+
+
+allprojects {
+
+  repositories {
+    mavenLocal()
+    maven {
+      url "http://repo1.maven.org/maven2/"
+    }
+    //this by default is https?
+    mavenCentral()
+  }
+
+  configurations {
+    compile.transitive = true
+  }
+
+
+
+  task showPropertiesTask << {
+    println PROJECT_VERSION
+  }
+
+
+  apply plugin: "java"
+  apply plugin: 'maven'
+
+  dependencies {
+    testCompile group: 'org.junit', name: 'com.springsource.org.junit', version: '4.7.0'
+  }
+
+
+  buildDir = 'target'
+  sourceSets {
+    main {
+      java {
+        srcDir 'src/main/java'
+        output.classesDir 'target/classes'
+        output.resourcesDir 'target/classes'
+      }
+    }
+
+
+//    test {
+//      java {
+//        srcDirs = ['src/test/java']
+//      }
+//    }
+
+  }
+
+
+
+  jar {
+    destinationDir = file('target')
+  }
+
+
+}

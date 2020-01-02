@@ -1,0 +1,36 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.mhisoft.java.apps</groupId>
+    <artifactId>common-utils</artifactId>
+    <version>1.0</version>
+    <packaging>jar</packaging>
+    <name>common-util</name>
+    <description>Wallet</description>
+
+    <parent>
+        <groupId>org.mhisoft.java.apps.common</groupId>
+        <artifactId>common-parent</artifactId>
+        <version>1.0</version>
+        <relativePath>../parent-pom/pom.xml</relativePath>
+    </parent>
+
+
+    <dependencies>
+        <dependency>
+            <groupId>org.jasypt</groupId>
+            <artifactId>jasypt</artifactId>
+            <version>1.9.2</version>
+        </dependency>
+        <!--https://github.com/fracpete/vfsjfilechooser2/releases-->
+        <dependency>
+            <groupId>com.github.fracpete</groupId>
+            <artifactId>vfsjfilechooser2</artifactId>
+            <version>0.2.9-p1</version>
+        </dependency>
+
+    </dependencies>
+
+</project>
